@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Web Cmd Base On Socket.IO</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px Helvetica, Arial; }
+      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      #messages { list-style-type: none; margin: 0; margin-bottom:41px; padding: 0; }
+      #messages li { padding: 5px 10px; }
+      #messages li:nth-child(odd) { background: #eee; }
+    </style>
+  </head>
+  <body>
+    <ul id="messages"></ul>
+    <form action="">
+      <input id="m" autocomplete="off" /><button>Send</button>
+    </form>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.bootcss.com/jquery/1.11.1/jquery.min.js"></script>
+    <script>
+        $(function () {
+            var socket = io();
+            $('form').submit(function(){
+                var msg = $('#m').val();
+                if(msg.trim().length == 0) {
+                    $('#m').val('');
+                    return false;
+                }
+                socket.emit('cmd', msg);
+                $('#m').val('');
+
+                $('form').children('button').attr('disabled', 'disabled');
+                return false;
+            });
+            socket.on('cmd', function(msg) {
+                $('#messages').append($('<li>').text(msg));
+                var h = $(document).height()-$(window).height();
+                $(document).scrollTop(h);
+            });
+            socket.on('cmd result', function(msg) {
+                var status = $('#messages').children('li').last().attr('status');
+                console.log(status);
+                if(!status) {
+                    $('#messages').append($('<li status="waiting">'));
+                    $('#messages').children('li').last().append($('<pre>').text(msg));
+                } else if(status == 'waiting') {
+                    var lastCmdRes = $('#messages').children('li').last().children('pre');
+                    lastCmdRes.text(lastCmdRes.text() + msg);
+                }
+                var h = $(document).height()-$(window).height();
+                $(document).scrollTop(h);
+            });
+            socket.on('cmd end', function(msg) {
+                var lastCmdRes = $('#messages').children('li').last();
+                if(lastCmdRes.attr('status') == 'waiting') {
+                    lastCmdRes.attr('status', 'end');
+                }
+                $('form').children('button').removeAttr('disabled');
+            });
+        });
+    </script>
+  </body>
+</html>
