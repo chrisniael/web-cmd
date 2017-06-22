@@ -23,43 +23,47 @@
     <script src="https://cdn.bootcss.com/jquery/1.11.1/jquery.min.js"></script>
     <script>
         $(function () {
-            var socket = io();
             $('form').submit(function(){
                 var msg = $('#m').val();
                 if(msg.trim().length == 0) {
                     $('#m').val('');
                     return false;
                 }
+
+                var socket = io();
+
+                socket.on('cmd', function(msg) {
+                    $('#messages').append($('<li>').text(msg));
+                    var h = $(document).height()-$(window).height();
+                    $(document).scrollTop(h);
+                });
+                socket.on('cmd result', function(msg) {
+                    var status = $('#messages').children('li').last().attr('status');
+                    console.log(status);
+                    if(!status) {
+                        $('#messages').append($('<li status="waiting">'));
+                        $('#messages').children('li').last().append($('<pre>').text(msg));
+                    } else if(status == 'waiting') {
+                        var lastCmdRes = $('#messages').children('li').last().children('pre');
+                        lastCmdRes.text(lastCmdRes.text() + msg);
+                    }
+                    var h = $(document).height()-$(window).height();
+                    $(document).scrollTop(h);
+                });
+                socket.on('cmd end', function(msg) {
+                    var lastCmdRes = $('#messages').children('li').last();
+                    if(lastCmdRes.attr('status') == 'waiting') {
+                        lastCmdRes.attr('status', 'end');
+                    }
+                    $('form').children('button').removeAttr('disabled');
+                    socket.close();
+                });
+
                 socket.emit('cmd', msg);
                 $('#m').val('');
 
                 $('form').children('button').attr('disabled', 'disabled');
                 return false;
-            });
-            socket.on('cmd', function(msg) {
-                $('#messages').append($('<li>').text(msg));
-                var h = $(document).height()-$(window).height();
-                $(document).scrollTop(h);
-            });
-            socket.on('cmd result', function(msg) {
-                var status = $('#messages').children('li').last().attr('status');
-                console.log(status);
-                if(!status) {
-                    $('#messages').append($('<li status="waiting">'));
-                    $('#messages').children('li').last().append($('<pre>').text(msg));
-                } else if(status == 'waiting') {
-                    var lastCmdRes = $('#messages').children('li').last().children('pre');
-                    lastCmdRes.text(lastCmdRes.text() + msg);
-                }
-                var h = $(document).height()-$(window).height();
-                $(document).scrollTop(h);
-            });
-            socket.on('cmd end', function(msg) {
-                var lastCmdRes = $('#messages').children('li').last();
-                if(lastCmdRes.attr('status') == 'waiting') {
-                    lastCmdRes.attr('status', 'end');
-                }
-                $('form').children('button').removeAttr('disabled');
             });
         });
     </script>
